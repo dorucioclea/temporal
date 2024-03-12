@@ -202,15 +202,15 @@ func (s *QueuePersistenceSuite) TestNamespaceReplicationDLQ() {
 	s.NoError(err)
 	result3, token, err := s.GetMessagesFromNamespaceDLQ(s.ctx, persistence.EmptyQueueMessageID, maxMessageID, numMessages, token)
 	s.Nil(err, "GetReplicationMessages failed.")
-	s.Equal(len(token), 0)
-	s.Equal(len(result3), numMessages-1)
+	s.Equal(0, len(token))
+	s.Equal(numMessages-1, len(result3))
 
 	err = s.RangeDeleteMessagesFromNamespaceDLQ(s.ctx, persistence.EmptyQueueMessageID, lastMessageID)
 	s.NoError(err)
 	result4, token, err := s.GetMessagesFromNamespaceDLQ(s.ctx, persistence.EmptyQueueMessageID, maxMessageID, numMessages, token)
 	s.Nil(err, "GetReplicationMessages failed.")
-	s.Equal(len(token), 0)
-	s.Equal(len(result4), 0)
+	s.Equal(0, len(token))
+	s.Equal(0, len(result4))
 }
 
 // TestNamespaceDLQMetadataOperations tests queue metadata operations
