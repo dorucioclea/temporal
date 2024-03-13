@@ -2,6 +2,8 @@ module go.temporal.io/server
 
 go 1.21
 
+replace github.com/gocql/gocql => github.com/scylladb/gocql v1.12.0
+
 require (
 	cloud.google.com/go/storage v1.36.0
 	github.com/aws/aws-sdk-go v1.44.289

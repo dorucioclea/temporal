@@ -37,6 +37,7 @@ import (
 	"go.temporal.io/api/serviceerror"
 	taskqueuepb "go.temporal.io/api/taskqueue/v1"
 	"go.temporal.io/api/workflowservice/v1"
+	"go.temporal.io/server/common/log/tag"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -274,7 +275,7 @@ func (s *FunctionalSuite) Test_DeleteWorkflowExecution_Running() {
 					},
 				)
 				if err == nil {
-					s.Logger.Warn("Execution not deleted yet")
+					s.Logger.Warn("Execution not deleted yet", tag.WorkflowID(we.WorkflowId), tag.WorkflowRunID(we.RunId))
 					return false
 				}
 				var notFoundErr *serviceerror.NotFound
@@ -284,6 +285,7 @@ func (s *FunctionalSuite) Test_DeleteWorkflowExecution_Running() {
 			},
 			waitForPersistence,
 			100*time.Millisecond,
+			"Execution with workflowId %v and runId %v wasn't deleted in a timely manner", we.WorkflowId, we.RunId,
 		)
 
 		// Check history is deleted.

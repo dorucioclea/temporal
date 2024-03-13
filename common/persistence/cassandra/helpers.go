@@ -26,6 +26,7 @@ package cassandra
 
 import (
 	"fmt"
+	"os"
 
 	"go.temporal.io/server/common/log"
 	"go.temporal.io/server/common/log/tag"
@@ -50,18 +51,22 @@ func CreateCassandraKeyspace(s gocql.Session, keyspace string, replicas int, ove
 		logger.Error("create keyspace error", tag.Error(err))
 		return
 	}
-	logger.Debug("created keyspace", tag.Value(keyspace))
+	logger.Debug("created keyspace", tag.NewStringTag("keyspace", keyspace))
 
 	return
 }
 
 // DropCassandraKeyspace drops the given keyspace, if it exists
 func DropCassandraKeyspace(s gocql.Session, keyspace string, logger log.Logger) (err error) {
+	if keepDatabase := os.Getenv("TEST_KEEP_DATA"); keepDatabase != "" {
+		logger.Debug("keeping keyspace", tag.Value(keyspace))
+		return
+	}
 	err = s.Query(fmt.Sprintf("DROP KEYSPACE IF EXISTS %s", keyspace)).Exec()
 	if err != nil {
 		logger.Error("drop keyspace error", tag.Error(err))
 		return
 	}
-	logger.Debug("dropped keyspace", tag.Value(keyspace))
+	logger.Debug("dropped keyspace", tag.NewStringTag("keyspace", keyspace))
 	return
 }

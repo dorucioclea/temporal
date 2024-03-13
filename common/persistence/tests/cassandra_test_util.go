@@ -52,7 +52,7 @@ import (
 const (
 	// TODO hard code this dir for now
 	//  need to merge persistence test config / initialization in one place
-	testCassandraExecutionSchema  = "../../../schema/cassandra/temporal/schema.cql"
+	testCassandraExecutionSchema = "../../../schema/cassandra/temporal/schema.cql"
 )
 
 // TODO merge the initialization with existing persistence setup

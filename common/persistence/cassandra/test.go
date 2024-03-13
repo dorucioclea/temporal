@@ -25,6 +25,7 @@
 package cassandra
 
 import (
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -91,7 +92,7 @@ func NewTestCluster(keyspace, username, password, host string, port int, schemaD
 func (s *TestCluster) Config() config.Persistence {
 	cfg := s.cfg
 	return config.Persistence{
-		DefaultStore:    "test",
+		DefaultStore: "test",
 		DataStores: map[string]config.DataStore{
 			"test": {Cassandra: &cfg, FaultInjection: s.faultInjection},
 		},
@@ -184,6 +185,11 @@ func (s *TestCluster) CreateDatabase() {
 
 // DropDatabase from PersistenceTestCluster interface
 func (s *TestCluster) DropDatabase() {
+	// Drop database unless explicitly told to keep it
+	if keepDatabase := os.Getenv("TEST_KEEP_DATA"); keepDatabase != "" {
+		s.logger.Info("keeping database", tag.NewStringTag("database", s.DatabaseName()))
+		return
+	}
 	err := DropCassandraKeyspace(s.session, s.DatabaseName(), s.logger)
 	if err != nil && !strings.Contains(err.Error(), "AlreadyExists") {
 		s.logger.Fatal("DropCassandraKeyspace", tag.Error(err))
