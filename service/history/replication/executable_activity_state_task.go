@@ -119,6 +119,9 @@ func (e *ExecutableActivityStateTask) QueueID() interface{} {
 }
 
 func (e *ExecutableActivityStateTask) Execute() error {
+	if e.Config.ShouldFailActivityReplicationTask() {
+		return serviceerror.NewInvalidArgument("forced replication error")
+	}
 	if e.TerminalState() {
 		return nil
 	}

@@ -318,8 +318,10 @@ type Config struct {
 	SendRawWorkflowHistory dynamicconfig.BoolPropertyFnWithNamespaceFilter
 
 	// FrontendAccessHistoryFraction is an interim flag across 2 minor releases and will be removed once fully enabled.
-	FrontendAccessHistoryFraction dynamicconfig.FloatPropertyFn
-	ShouldFailReplicationTask     dynamicconfig.BoolPropertyFn
+	FrontendAccessHistoryFraction          dynamicconfig.FloatPropertyFn
+	ShouldFailHistoryReplicationTask       dynamicconfig.BoolPropertyFn
+	ShouldFailActivityReplicationTask      dynamicconfig.BoolPropertyFn
+	ShouldFailWorkflowStateReplicationTask dynamicconfig.BoolPropertyFn
 }
 
 const (
@@ -578,8 +580,10 @@ func NewConfig(
 
 		SendRawWorkflowHistory: dc.GetBoolPropertyFnWithNamespaceFilter(dynamicconfig.SendRawWorkflowHistory, false),
 
-		FrontendAccessHistoryFraction: dc.GetFloat64Property(dynamicconfig.FrontendAccessHistoryFraction, 0.0),
-		ShouldFailReplicationTask:     dc.GetBoolProperty(dynamicconfig.HistoryShouldFailReplicationTask, false),
+		FrontendAccessHistoryFraction:          dc.GetFloat64Property(dynamicconfig.FrontendAccessHistoryFraction, 0.0),
+		ShouldFailHistoryReplicationTask:       dc.GetBoolProperty(dynamicconfig.HistoryShouldFailHistoryReplicationTask, false),
+		ShouldFailActivityReplicationTask:      dc.GetBoolProperty(dynamicconfig.HistoryShouldFailActivityReplicationTask, false),
+		ShouldFailWorkflowStateReplicationTask: dc.GetBoolProperty(dynamicconfig.HistoryShouldFailWorkflowStateReplicationTask, false),
 	}
 
 	return cfg

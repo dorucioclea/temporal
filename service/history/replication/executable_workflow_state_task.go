@@ -93,6 +93,9 @@ func (e *ExecutableWorkflowStateTask) QueueID() interface{} {
 }
 
 func (e *ExecutableWorkflowStateTask) Execute() error {
+	if e.Config.ShouldFailWorkflowStateReplicationTask() {
+		return serviceerror.NewInvalidArgument("forced replication error")
+	}
 	if e.TerminalState() {
 		return nil
 	}
