@@ -378,9 +378,9 @@ $(SUMMARY_COVER_PROFILE):
 		echo "No coverage data, aborting!" && exit 1; \
 	fi
 	@echo "mode: atomic" > $(SUMMARY_COVER_PROFILE)
-	$(foreach COVER_PROFILE,$(wildcard $(TEST_OUTPUT_ROOT)/*.cover.out),\
-		@printf "Add %s...\n" $(COVER_PROFILE); \
-		@grep -v -e "[Mm]ocks\?.go" -e "^mode: \w\+" $(COVER_PROFILE) >> $(SUMMARY_COVER_PROFILE) || true \
+	@$(foreach COVER_PROFILE,$(wildcard $(TEST_OUTPUT_ROOT)/*.cover.out),\
+		printf "Add %s...\n" $(COVER_PROFILE); \
+		grep -v -e "[Mm]ocks\?.go" -e "^mode: \w\+" $(COVER_PROFILE) >> $(SUMMARY_COVER_PROFILE) || true \
 	$(NEWLINE))
 
 coverage-report: $(SUMMARY_COVER_PROFILE)
