@@ -794,11 +794,9 @@ func (e *matchingEngineImpl) DescribeTaskQueue(
 ) (*matchingservice.DescribeTaskQueueResponse, error) {
 	req := request.GetDescRequest()
 	if req.ApiMode == enumspb.DESCRIBE_TASK_QUEUE_MODE_ENHANCED {
-
 		// collect internal info
 		physicalInfoByBuildId := make(map[string]map[enumspb.TaskQueueType]*taskqueuespb.PhysicalTaskQueueInfo)
 		for _, taskQueueType := range req.TaskQueueTypes {
-
 			for i := 0; i < e.config.NumTaskqueueWritePartitions(req.Namespace, req.TaskQueue.Name, taskQueueType); i++ {
 				pm, err := e.getTaskQueuePartitionManager(
 					ctx,
@@ -807,7 +805,7 @@ func (e *matchingEngineImpl) DescribeTaskQueue(
 						TaskQueueType: taskQueueType,
 						PartitionId:   &taskqueuespb.TaskQueuePartition_NormalPartitionId{NormalPartitionId: int32(i)},
 					}, request.GetNamespaceId()),
-					true, // todo carly: should this be true?
+					true,
 				)
 				if err != nil {
 					return nil, err
@@ -851,10 +849,14 @@ func (e *matchingEngineImpl) DescribeTaskQueue(
 					Pollers: physicalInfo.Pollers,
 				})
 			}
+			reachability, err := e.getBuildIdTaskReachability(ctx, request.NamespaceId, req.Namespace, req.TaskQueue.Name, bid, typesInfo)
+			if err != nil {
+				return nil, err
+			}
 			versionsInfo = append(versionsInfo, &taskqueuepb.TaskQueueVersionInfo{
 				BuildId:          bid,
 				TypesInfo:        typesInfo,
-				TaskReachability: enumspb.BUILD_ID_TASK_REACHABILITY_UNSPECIFIED,
+				TaskReachability: reachability,
 			})
 		}
 		return &matchingservice.DescribeTaskQueueResponse{
@@ -1850,4 +1852,15 @@ func (e *matchingEngineImpl) reviveBuildId(ns *namespace.Namespace, taskQueue st
 // be processed on the normal queue.
 func stickyWorkerAvailable(pm taskQueuePartitionManager) bool {
 	return pm != nil && pm.HasPollerAfter("", time.Now().Add(-stickyPollerUnavailableWindow))
+}
+
+func (e *matchingEngineImpl) getBuildIdTaskReachability(
+	ctx context.Context,
+	nsID,
+	nsName,
+	taskQueue,
+	buildId string,
+	typesInfo []*taskqueuepb.TaskQueueTypeInfo,
+) (enumspb.BuildIdTaskReachability, error) {
+	return enumspb.BUILD_ID_TASK_REACHABILITY_UNSPECIFIED, nil
 }
