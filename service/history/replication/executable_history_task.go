@@ -265,7 +265,6 @@ func (e *ExecutableHistoryTask) MarkPoisonPill() error {
 
 	ctx, cancel := newTaskContext(e.NamespaceID)
 	defer cancel()
-
 	return writeTaskToDLQ(ctx, e.DLQWriter, shardContext, e.SourceClusterName(), taskInfo)
 }
 

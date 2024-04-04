@@ -219,7 +219,7 @@ func (f *factoryImpl) NewHistoryTaskQueueManager() (p.HistoryTaskQueueManager, e
 	if err != nil {
 		return nil, err
 	}
-	return p.NewHistoryTaskQueueManager(q), nil
+	return p.NewHistoryTaskQueueManager(q, serialization.NewSerializer()), nil
 }
 
 // Close closes this factory
