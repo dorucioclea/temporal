@@ -53,6 +53,7 @@ type (
 	session struct {
 		status               int32
 		newClusterConfigFunc func() (*gocql.ClusterConfig, error)
+		spec                 func() gocql.SpeculativeExecutionPolicy
 		atomic.Value         // *gocql.Session
 		logger               log.Logger
 
@@ -66,6 +67,7 @@ func NewSession(
 	newClusterConfigFunc func() (*gocql.ClusterConfig, error),
 	logger log.Logger,
 	metricsHandler metrics.Handler,
+	optionalSpeculativeExecutionPolicy ...func() gocql.SpeculativeExecutionPolicy,
 ) (*session, error) {
 
 	gocqlSession, err := initSession(logger, newClusterConfigFunc, metricsHandler)
@@ -73,9 +75,15 @@ func NewSession(
 		return nil, err
 	}
 
+	spec := func() gocql.SpeculativeExecutionPolicy { return nil }
+	if len(optionalSpeculativeExecutionPolicy) == 1 {
+		spec = optionalSpeculativeExecutionPolicy[0]
+	}
+
 	session := &session{
 		status:               common.DaemonStatusStarted,
 		newClusterConfigFunc: newClusterConfigFunc,
+		spec:                 spec,
 		logger:               logger,
 		metricsHandler:       metricsHandler,
 
@@ -142,6 +150,10 @@ func (s *session) Query(
 		return nil
 	}
 
+	if spec := s.spec(); spec != nil {
+		q.SetSpeculativeExecutionPolicy(spec)
+	}
+
 	return &query{
 		session:    s,
 		gocqlQuery: q,
@@ -154,6 +166,9 @@ func (s *session) NewBatch(
 	b := s.Value.Load().(*gocql.Session).NewBatch(mustConvertBatchType(batchType))
 	if b == nil {
 		return nil
+	}
+	if spec := s.spec(); spec != nil {
+		b.SpeculativeExecutionPolicy(spec)
 	}
 	return &batch{
 		session:    s,
