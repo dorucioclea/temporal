@@ -26,6 +26,7 @@ package gocql
 
 import (
 	"context"
+	"time"
 
 	"github.com/gocql/gocql"
 )
@@ -104,6 +105,15 @@ func (q *query) PageState(state []byte) Query {
 
 func (q *query) Consistency(c Consistency) Query {
 	q.gocqlQuery.Consistency(mustConvertConsistency(c))
+	return newQuery(q.session, q.gocqlQuery)
+}
+
+func (q *query) SpeculativeExecution(attempts int, timeout time.Duration) Query {
+	policy := &gocql.SimpleSpeculativeExecution{
+		NumAttempts:  attempts,
+		TimeoutDelay: timeout,
+	}
+	q.gocqlQuery.SetSpeculativeExecutionPolicy(policy)
 	return newQuery(q.session, q.gocqlQuery)
 }
 

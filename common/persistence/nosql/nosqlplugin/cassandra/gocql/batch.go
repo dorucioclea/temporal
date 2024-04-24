@@ -27,6 +27,7 @@ package gocql
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gocql/gocql"
 )
@@ -68,6 +69,16 @@ func (b *batch) WithContext(ctx context.Context) Batch {
 
 func (b *batch) WithTimestamp(timestamp int64) Batch {
 	b.gocqlBatch.WithTimestamp(timestamp)
+	return newBatch(b.session, b.gocqlBatch)
+}
+
+// use 0, 1 for non-speculative execution
+func (b *batch) SpeculativeExecution(attempts int, timeout time.Duration) Batch {
+	policy := &gocql.SimpleSpeculativeExecution{
+		NumAttempts:  attempts,
+		TimeoutDelay: timeout,
+	}
+	b.gocqlBatch.SpeculativeExecutionPolicy(policy)
 	return newBatch(b.session, b.gocqlBatch)
 }
 

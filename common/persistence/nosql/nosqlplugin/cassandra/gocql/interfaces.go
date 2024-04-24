@@ -28,6 +28,7 @@ package gocql
 
 import (
 	"context"
+	"time"
 )
 
 // Note: this file defines the minimal interface that is needed by Temporal's cassandra
@@ -60,6 +61,8 @@ type (
 		WithTimestamp(int64) Query
 		Consistency(Consistency) Query
 		Bind(...interface{}) Query
+		// use 0, 1 for non-speculative execution
+		SpeculativeExecution(attempts int, timeout time.Duration) Query
 	}
 
 	// Batch is the interface for batch operation.
@@ -67,6 +70,8 @@ type (
 		Query(string, ...interface{})
 		WithContext(context.Context) Batch
 		WithTimestamp(int64) Batch
+		// use 0, 1 for non-speculative execution
+		SpeculativeExecution(attempts int, timeout time.Duration) Batch
 	}
 
 	// Iter is the interface for executing and iterating over all resulting rows.
