@@ -53,21 +53,37 @@ type (
 	session struct {
 		status               int32
 		newClusterConfigFunc func() (*gocql.ClusterConfig, error)
-		spec                 func() gocql.SpeculativeExecutionPolicy
-		atomic.Value         // *gocql.Session
-		logger               log.Logger
+		SessionOptions
+		atomic.Value // *gocql.Session
+		logger       log.Logger
 
 		sync.Mutex
 		sessionInitTime time.Time
 		metricsHandler  metrics.Handler
 	}
+
+	SessionOptions struct {
+		Spec        func() gocql.SpeculativeExecutionPolicy
+		Idempotency func(string) bool
+	}
 )
+
+func (o SessionOptions) spec() gocql.SpeculativeExecutionPolicy {
+	if o.Spec == nil {
+		return nil
+	}
+	return o.Spec()
+}
+
+func (o SessionOptions) idempotency(statement string) bool {
+	return o.Idempotency != nil && o.Idempotency(statement)
+}
 
 func NewSession(
 	newClusterConfigFunc func() (*gocql.ClusterConfig, error),
 	logger log.Logger,
 	metricsHandler metrics.Handler,
-	optionalSpeculativeExecutionPolicy ...func() gocql.SpeculativeExecutionPolicy,
+	options ...SessionOptions,
 ) (*session, error) {
 
 	gocqlSession, err := initSession(logger, newClusterConfigFunc, metricsHandler)
@@ -75,15 +91,14 @@ func NewSession(
 		return nil, err
 	}
 
-	spec := func() gocql.SpeculativeExecutionPolicy { return nil }
-	if len(optionalSpeculativeExecutionPolicy) == 1 {
-		spec = optionalSpeculativeExecutionPolicy[0]
+	if len(options) == 0 {
+		options = append(options, SessionOptions{})
 	}
 
 	session := &session{
 		status:               common.DaemonStatusStarted,
 		newClusterConfigFunc: newClusterConfigFunc,
-		spec:                 spec,
+		SessionOptions:       options[0],
 		logger:               logger,
 		metricsHandler:       metricsHandler,
 
@@ -150,6 +165,7 @@ func (s *session) Query(
 		return nil
 	}
 
+	q.Idempotent(s.idempotency(stmt))
 	if spec := s.spec(); spec != nil {
 		q.SetSpeculativeExecutionPolicy(spec)
 	}
