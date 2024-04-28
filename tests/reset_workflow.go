@@ -553,6 +553,15 @@ func (s *FunctionalSuite) testResetWorkflowWithBufferedSignal(
 			_, err := s.engine.SignalWorkflowExecution(NewContext(), signalRequest)
 			s.NoError(err)
 
+			// send update while WFT is in-progress
+			go s.sendUpdateWaitPolicyAccepted(tv, tv.UpdateID())
+			for {
+				_, err := s.pollUpdate(tv, tv.UpdateID(), &updatepb.WaitPolicy{LifecycleStage: enumspb.UPDATE_WORKFLOW_EXECUTION_LIFECYCLE_STAGE_UNSPECIFIED})
+				if err == nil {
+					break
+				}
+			}
+
 			resp, err := s.engine.ResetWorkflowExecution(NewContext(), &workflowservice.ResetWorkflowExecutionRequest{
 				Namespace:                 tv.NamespaceName().String(),
 				WorkflowExecution:         tv.WorkflowExecution(),
