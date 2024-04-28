@@ -43,6 +43,7 @@ import (
 	updatepb "go.temporal.io/api/update/v1"
 	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/server/common/log/tag"
+	"go.temporal.io/server/common/namespace"
 	"go.temporal.io/server/common/payloads"
 	"go.temporal.io/server/common/testing/protoutils"
 	"go.temporal.io/server/common/testing/testvars"
@@ -529,67 +530,40 @@ func (s *FunctionalSuite) testResetWorkflowWithBufferedSignal(
 	reapplyType enumspb.ResetReapplyType,
 	reapplyExcludeTypes []enumspb.ResetReapplyExcludeType,
 ) {
-	identity := "worker1"
-
-	workflowType := &commonpb.WorkflowType{Name: workflowTypeName}
-	taskQueue := &taskqueuepb.TaskQueue{Name: taskQueueName, Kind: enumspb.TASK_QUEUE_KIND_NORMAL}
-
-	// Start workflow execution
-	request := &workflowservice.StartWorkflowExecutionRequest{
-		RequestId:           uuid.New(),
-		Namespace:           s.namespace,
-		WorkflowId:          workflowID,
-		WorkflowType:        workflowType,
-		TaskQueue:           taskQueue,
-		Input:               nil,
-		WorkflowRunTimeout:  durationpb.New(100 * time.Second),
-		WorkflowTaskTimeout: durationpb.New(1 * time.Second),
-		Identity:            identity,
-	}
-
-	we, err0 := s.engine.StartWorkflowExecution(NewContext(), request)
-	s.NoError(err0)
-	runID := we.RunId
+	tv := testvars.New(s.T().Name()).WithNamespaceName(namespace.Name(s.namespace)).WithWorkflowID(workflowID).WithWorkflowType(workflowTypeName).WithTaskQueue(taskQueueName)
+	tv = s.startWorkflow(tv)
 
 	signalRequest := &workflowservice.SignalWorkflowExecutionRequest{
-		Namespace: s.namespace,
-		WorkflowExecution: &commonpb.WorkflowExecution{
-			WorkflowId: workflowID,
-			RunId:      runID,
-		},
-		SignalName: "random signal name",
-		Input: &commonpb.Payloads{Payloads: []*commonpb.Payload{{
-			Data: []byte("random data"),
-		}}},
-		Identity: identity,
+		Namespace:         tv.NamespaceName().String(),
+		WorkflowExecution: tv.WorkflowExecution(),
+		SignalName:        tv.HandlerName(),
+		Input:             tv.Any().Payloads(),
+		Identity:          tv.ClientIdentity(),
+		RequestId:         uuid.New(),
 	}
 
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunId))
-
 	// workflow logic
-	resetRunID := ""
+	didReset := false
 	workflowComplete := false
 	wtHandler := func(execution *commonpb.WorkflowExecution, wt *commonpb.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *historypb.History) ([]*commandpb.Command, error) {
 
-		if len(resetRunID) == 0 {
-			signalRequest.RequestId = uuid.New()
+		if !didReset {
+			// send signal while WFT is in-progress; it will be buffered
 			_, err := s.engine.SignalWorkflowExecution(NewContext(), signalRequest)
 			s.NoError(err)
 
 			resp, err := s.engine.ResetWorkflowExecution(NewContext(), &workflowservice.ResetWorkflowExecutionRequest{
-				Namespace: s.namespace,
-				WorkflowExecution: &commonpb.WorkflowExecution{
-					WorkflowId: workflowID,
-					RunId:      runID,
-				},
+				Namespace:                 tv.NamespaceName().String(),
+				WorkflowExecution:         tv.WorkflowExecution(),
 				Reason:                    "reset execution from test",
 				WorkflowTaskFinishEventId: 3,
 				RequestId:                 uuid.New(),
 				ResetReapplyType:          reapplyType,
 			})
 			s.NoError(err)
-			resetRunID = resp.RunId
+			didReset = true
+			tv = tv.WithRunID(resp.RunId)
 
 			return []*commandpb.Command{}, nil
 		}
@@ -607,9 +581,9 @@ func (s *FunctionalSuite) testResetWorkflowWithBufferedSignal(
 
 	poller := &TaskPoller{
 		Engine:              s.engine,
-		Namespace:           s.namespace,
-		TaskQueue:           taskQueue,
-		Identity:            identity,
+		Namespace:           tv.NamespaceName().String(),
+		TaskQueue:           tv.TaskQueue(),
+		Identity:            tv.WorkerIdentity(),
 		WorkflowTaskHandler: wtHandler,
 		Logger:              s.Logger,
 		T:                   s.T(),
@@ -624,10 +598,7 @@ func (s *FunctionalSuite) testResetWorkflowWithBufferedSignal(
 	s.NoError(err)
 	s.True(workflowComplete)
 
-	events := s.getHistory(s.namespace, &commonpb.WorkflowExecution{
-		WorkflowId: workflowID,
-		RunId:      resetRunID,
-	})
+	events := s.getHistory(tv.NamespaceName().String(), tv.WorkflowExecution())
 
 	switch reapplyType {
 	case enumspb.RESET_REAPPLY_TYPE_SIGNAL:
