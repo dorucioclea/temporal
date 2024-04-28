@@ -512,7 +512,7 @@ func (s *FunctionalSuite) TestResetWorkflow_WithBufferedSignal_ReapplySignals() 
 	workflowTypeName := "functional-reset-workflow-test-reapply-buffer-all-type"
 	taskQueueName := "functional-reset-workflow-test-reapply-buffer-all-taskqueue"
 
-	s.testResetWorkflowWithBufferedSignal(workflowID, workflowTypeName, taskQueueName, enumspb.RESET_REAPPLY_TYPE_SIGNAL, []enumspb.ResetReapplyExcludeType{})
+	s.testResetWorkflowWithBufferedSignal(workflowID, workflowTypeName, taskQueueName, enumspb.RESET_REAPPLY_TYPE_ALL_ELIGIBLE, []enumspb.ResetReapplyExcludeType{})
 }
 
 func (s *FunctionalSuite) TestResetWorkflow_WithBufferedSignal_ReapplyNone() {
@@ -610,6 +610,18 @@ func (s *FunctionalSuite) testResetWorkflowWithBufferedSignal(
 	events := s.getHistory(tv.NamespaceName().String(), tv.WorkflowExecution())
 
 	switch reapplyType {
+	case enumspb.RESET_REAPPLY_TYPE_ALL_ELIGIBLE:
+		s.EqualHistoryEvents(`
+		1 WorkflowExecutionStarted
+		2 WorkflowTaskScheduled
+		3 WorkflowTaskStarted
+		4 WorkflowTaskFailed
+		5 WorkflowExecutionSignaled
+		6 WorkflowTaskScheduled
+		7 WorkflowTaskStarted
+		8 WorkflowTaskCompleted
+		9 WorkflowExecutionCompleted
+			  `, events)
 	case enumspb.RESET_REAPPLY_TYPE_SIGNAL:
 		s.EqualHistoryEvents(`
 		1 WorkflowExecutionStarted
