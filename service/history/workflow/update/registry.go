@@ -81,6 +81,8 @@ type (
 		//   - updates in stateCompleted are ignored.
 		CancelIncomplete(ctx context.Context, reason CancelReason, eventStore EventStore) error
 
+		Contains(protocolInstanceID string) bool
+
 		// Clear registry and abort all waiters.
 		Clear()
 
@@ -235,6 +237,11 @@ func (r *registry) CancelIncomplete(ctx context.Context, reason CancelReason, ev
 		}
 	}
 	return nil
+}
+
+// Contains returns true iff the update ID exists in the registry.
+func (r *registry) Contains(id string) bool {
+	return r.updates[id] != nil
 }
 
 // RejectUnprocessed reject all updates that are waiting for workflow task to be completed.
